@@ -29,6 +29,8 @@ RUN npm ci
 # set any environment variables required by the application
 ENV APP_PORT=5000
 
+VOLUME /external
+
 # healthcheck, expect a return value 0 if successful
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl http://localhost${APP_PORT}/healthz > /dev/null || exit 1
