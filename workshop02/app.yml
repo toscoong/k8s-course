@@ -6,7 +6,7 @@ metadata:
   labels:
     name: bggapp-svc
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     name: bggapp-po
   ports:
@@ -35,7 +35,7 @@ spec:
     spec:
       containers:
         - name: bggapp
-          image: stackupiss/bgg-backend:v1
+          image: stackupiss/bgg-backend:v2
           envFrom:
             - configMapRef:
                 name: bggapp-cm
