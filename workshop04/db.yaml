@@ -1,0 +1,124 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-cm
+  labels:
+    name: db-cm
+data:
+  MYSQL_DATABASE: wpdbname
+  
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+  labels:
+    name: db-secret
+data:
+  MYSQL_ROOT_PASSWORD: cm9vdHdw
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-1gi-pvc
+  labels:
+    name: mysql-1gi-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: do-block-storage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-svc
+  labels:
+    name: db-svc
+spec:
+  clusterIP: None
+  selector:
+    name: db-po
+  ports:
+    - port: 3306
+      targetPort: 3306
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deploy
+  labels:
+    name: db-deploy
+  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: db-po
+  template:
+    metadata:
+      name: db-po
+      labels:
+        name: db-po
+    spec:
+      volumes:
+        - name: db-vol
+          persistentVolumeClaim:
+            claimName: mysql-1gi-pvc
+      containers:
+        - name: db
+          image: mysql:8.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: db-cm
+            - secretRef:
+                name: db-secret
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: db-vol
+              mountPath: /var/lib/mysql
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-db-all
+  labels:
+    name: deny-db-all
+spec:
+  podSelector:
+    matchLabels:
+      name: db-po
+  policyTypes:
+  - Ingress
+  - Egress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: inbound-wp
+  labels:
+    name: inbound-wp
+spec:
+  podSelector:
+    matchLabels:
+      name: db-po
+  policyTypes:
+  - Ingress
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            name: wp-po
+      ports:
+        - port: 3306
+          protocol: TCP
